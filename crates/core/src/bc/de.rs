@@ -168,7 +168,10 @@ fn bc_modern_msg<'a, 'b>(
     }
 
     let (buf, ext_buf) = take(ext_len)(buf)?;
-    let payload_len = header.body_len - ext_len;
+    let payload_len = header
+        .body_len
+        .checked_sub(ext_len)
+        .ok_or(Err::Error(make_error(buf, ErrorKind::LengthValue)))?;
     let (buf, payload_buf) = take(payload_len)(buf)?;
 
     let decrypted;
