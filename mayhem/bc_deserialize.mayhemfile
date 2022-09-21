@@ -1,0 +1,7 @@
+project: neolink
+target: bc-deserialize
+
+cmds:
+  - cmd: /bc_deserialize
+  - cmd: /bc_deserialize_no_inst @@
+    libfuzzer: false

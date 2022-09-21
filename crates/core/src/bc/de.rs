@@ -50,6 +50,7 @@ where
             Err(e) => return Err(e.into()),
         };
 
+        #[cfg(not(fuzzing))]
         let start_time = OffsetDateTime::now_utc();
         loop {
             match (&mut rdr)
@@ -57,7 +58,12 @@ where
                 .read_to_end(&mut input)
             {
                 Ok(0) => {
-                    if (OffsetDateTime::now_utc() - start_time) > RX_TIMEOUT {
+                    #[cfg(not(fuzzing))]
+                    let timed_out = (OffsetDateTime::now_utc() - start_time) > RX_TIMEOUT;
+                    #[cfg(fuzzing)]
+                    let timed_out = true;
+
+                    if timed_out {
                         return Err(std::io::Error::new(
                             std::io::ErrorKind::UnexpectedEof,
                             "Read returned 0 bytes",
@@ -83,6 +89,13 @@ impl Bc {
         // Throw away the nom-specific return types
         read_from_reader(|reader| bc_msg(context, reader), r)
     }
+}
+
+pub fn bc_deserialize<R: Read>(r: R) -> Result<Bc, Error> {
+    use std::sync::Arc;
+    use std::sync::Mutex;
+    let mut context = BcContext::new(Arc::new(Mutex::new(EncryptionProtocol::Unencrypted)));
+    Bc::deserialize(&mut context, r)
 }
 
 fn bc_msg<'a, 'b>(context: &'a mut BcContext, buf: &'b [u8]) -> IResult<&'b [u8], Bc> {
@@ -155,7 +168,10 @@ fn bc_modern_msg<'a, 'b>(
     }
 
     let (buf, ext_buf) = take(ext_len)(buf)?;
-    let payload_len = header.body_len - ext_len;
+    let payload_len = header
+        .body_len
+        .checked_sub(ext_len)
+        .ok_or(Err::Error(make_error(buf, ErrorKind::LengthValue)))?;
     let (buf, payload_buf) = take(payload_len)(buf)?;
 
     let decrypted;
