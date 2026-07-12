@@ -1,0 +1,29 @@
+[package]
+name = "neolink_core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2018"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+# Same yaserde line the neolink_core crate itself uses (crates/core/Cargo.toml).
+yaserde = "0.3.16"
+
+[dependencies.neolink_core]
+path = "../../crates/core"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "bc_deserialize"
+path = "fuzz_targets/bc_deserialize.rs"
+test = false
+doc = false

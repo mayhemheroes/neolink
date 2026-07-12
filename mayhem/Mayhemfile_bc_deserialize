@@ -1,0 +1,5 @@
+project: neolink
+target: bc-deserialize
+cmds:
+  - cmd: /mayhem/bc_deserialize
+    libfuzzer: true
